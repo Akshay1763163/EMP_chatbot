@@ -88,7 +88,7 @@ def _build_agent() -> AgentExecutor | None:
             "You are an HR assistant. Use ONLY the provided tools to answer questions about employees. "
             "The employee table has these columns: id, name, joined_date, salary, role, department, active, date_of_resign. "
             "active = 1 means current employee, active = 0 means ex-employee. "
-
+            "Always use LIKE '%value%' for name searches, never use = for names. "
             "Always call query_employees_nl for any user question. "
 
             "Call each tool only ONCE. "
