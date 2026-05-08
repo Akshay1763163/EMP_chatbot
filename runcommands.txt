@@ -1,0 +1,9 @@
+Start backend (if not already):
+uvicorn app.main:app --reload
+
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+Start frontend from the frontend folder:
+npm.cmd run dev
