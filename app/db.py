@@ -47,14 +47,17 @@ def fetch_employee_by_id(employee_id: int) -> dict | None:
         cursor.execute(
             """
             SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            return _row_to_employee(row)
+            FROM dbo.Employees
+            WHERE id = ?
             """,
-            join_year,
-            join_month,
+            employee_id,
         )
-        rows = cursor.fetchall()
+        row = cursor.fetchone()
 
-    return [_row_to_employee(row) for row in rows]
+    if not row:
+        return None
+
+    return _row_to_employee(row)
 
 
 def run_select_query(sql: str) -> list[dict]:
