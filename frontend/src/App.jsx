@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 const apiBase = import.meta.env.VITE_API_BASE || '/api'
@@ -10,10 +10,6 @@ const formatSalary = new Intl.NumberFormat('en-IN', {
 }).format
 
 function App() {
-  const [employees, setEmployees] = useState([])
-  const [employeesLoading, setEmployeesLoading] = useState(true)
-  const [employeesError, setEmployeesError] = useState('')
-
   const [employeeId, setEmployeeId] = useState('')
   const [employeeDetail, setEmployeeDetail] = useState(null)
   const [employeeLoading, setEmployeeLoading] = useState(false)
@@ -35,43 +31,6 @@ function App() {
   function formatActiveStatus(active) {
     return active ? 'Active' : 'Inactive'
   }
-
-  const totalPayroll = useMemo(() => {
-    return employees.reduce((sum, item) => sum + item.salary, 0)
-  }, [employees])
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadEmployees() {
-      setEmployeesLoading(true)
-      setEmployeesError('')
-      try {
-        const response = await fetch(`${apiBase}/employees`)
-        if (!response.ok) {
-          throw new Error('Failed to load employees')
-        }
-        const data = await response.json()
-        if (isMounted) {
-          setEmployees(data)
-        }
-      } catch (error) {
-        if (isMounted) {
-          setEmployeesError(error.message || 'Unexpected error')
-        }
-      } finally {
-        if (isMounted) {
-          setEmployeesLoading(false)
-        }
-      }
-    }
-
-    loadEmployees()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
 
   async function handleLookup(event) {
     event.preventDefault()
@@ -163,18 +122,14 @@ function App() {
           <p className="eyebrow">EmployeeDB Live</p>
           <h1>Employee roster at a glance.</h1>
           <p className="lead">
-            Connected to SQL Server with FastAPI. Pull the full roster, then
-            drill into a single record on demand.
+            Connected to SQL Server with FastAPI. Lookup a single record by
+            ID and ask complex questions through the assistant.
           </p>
         </div>
         <div className="hero-card">
           <div>
-            <p className="label">Total Employees</p>
-            <h2>{employees.length}</h2>
-          </div>
-          <div>
-            <p className="label">Total Payroll</p>
-            <h2>{formatSalary(totalPayroll)}</h2>
+            <p className="label">Quick lookup</p>
+            <h2>Employee ID</h2>
           </div>
         </div>
       </header>

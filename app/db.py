@@ -1,6 +1,5 @@
 import os
 import pyodbc
-from datetime import date
 
 
 def _build_conn_str() -> str:
@@ -42,83 +41,13 @@ def _row_to_employee(row) -> dict:
     }
 
 
-def fetch_all_employees() -> list[dict]:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            FROM dbo.Employees
-            ORDER BY id
-            """
-        )
-        rows = cursor.fetchall()
-
-    return [_row_to_employee(row) for row in rows]
-
-
 def fetch_employee_by_id(employee_id: int) -> dict | None:
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
             SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            FROM dbo.Employees
-            WHERE id = ?
-            """,
-            employee_id,
-        )
-        row = cursor.fetchone()
-
-    if not row:
-        return None
-
-    return _row_to_employee(row)
-
-
-def fetch_employee_by_name(name: str) -> list[dict]:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            FROM dbo.Employees
-            WHERE name LIKE ?
-            ORDER BY id
-            """,
-            f"%{name}%",
-        )
-        rows = cursor.fetchall()
-
-    return [_row_to_employee(row) for row in rows]
-
-
-def fetch_employees_by_join_date(joined_date: date) -> list[dict]:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            FROM dbo.Employees
-            WHERE joined_date = ?
-            ORDER BY id
-            """,
-            joined_date,
-        )
-        rows = cursor.fetchall()
-
-    return [_row_to_employee(row) for row in rows]
-
-
-def fetch_employees_by_join_month_year(join_month: int, join_year: int) -> list[dict]:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, name, joined_date, salary, role, department, active, date_of_resign
-            FROM dbo.Employees
-            WHERE YEAR(joined_date) = ? AND MONTH(joined_date) = ?
-            ORDER BY id
+            return _row_to_employee(row)
             """,
             join_year,
             join_month,

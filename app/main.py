@@ -1,6 +1,4 @@
 import os
-import re
-from datetime import date
 
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
@@ -9,38 +7,13 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_groq import ChatGroq
 
-from .db import (
-    fetch_all_employees,
-    fetch_employee_by_id,
-    fetch_employee_by_name,
-    fetch_employees_by_join_date,
-    fetch_employees_by_join_month_year,
-    run_select_query,
-)
+from .db import fetch_employee_by_id, run_select_query
 from .schemas import ChatRequest, ChatResponse, EmployeeOut
 
 load_dotenv()
 
 app = FastAPI(title="Employee API")
 sql_llm: ChatGroq | None = None
-
-
-@tool
-def get_employee_by_name(name: str) -> list[dict]:
-    """Get employees by name (partial match)."""
-    return fetch_employee_by_name(name)
-
-
-@tool
-def get_employee_by_id(id: int) -> dict | None:
-    """Get a single employee by id."""
-    return fetch_employee_by_id(id)
-
-
-@tool
-def get_all_employees() -> list[dict]:
-    """Get all employees."""
-    return fetch_all_employees()
 
 
 def _sanitize_sql(sql: str) -> str | None:
@@ -98,66 +71,6 @@ def query_employees_nl(question: str) -> dict:
     return {"sql": safe_sql, "rows": rows}
 
 
-@tool
-def get_employees_by_joindate(join_date: str) -> list[dict]:
-    """Get employees who joined on a specific date (YYYY-MM-DD)."""
-    try:
-        parsed_date = date.fromisoformat(join_date)
-    except ValueError:
-        return {"error": "Invalid date format. Use YYYY-MM-DD."}
-    return fetch_employees_by_join_date(parsed_date)
-
-
-def _parse_month_value(month_value: str) -> int | None:
-    normalized = month_value.strip().lower()
-    month_map = {
-        "january": 1,
-        "february": 2,
-        "march": 3,
-        "april": 4,
-        "may": 5,
-        "june": 6,
-        "july": 7,
-        "august": 8,
-        "september": 9,
-        "october": 10,
-        "november": 11,
-        "december": 12,
-        "first": 1,
-        "second": 2,
-        "third": 3,
-        "fourth": 4,
-        "fifth": 5,
-        "sixth": 6,
-        "seventh": 7,
-        "eighth": 8,
-        "ninth": 9,
-        "tenth": 10,
-        "eleventh": 11,
-        "twelfth": 12,
-    }
-
-    if normalized in month_map:
-        return month_map[normalized]
-
-    cleaned = normalized.replace("st", "").replace("nd", "").replace("rd", "").replace("th", "")
-    if cleaned.isdigit():
-        month_num = int(cleaned)
-        if 1 <= month_num <= 12:
-            return month_num
-
-    return None
-
-
-@tool
-def get_employees_by_join_month_year(month: str, year: int) -> list[dict] | dict:
-    """Get employees who joined in a given month and year (month can be number or name)."""
-    month_number = _parse_month_value(month)
-    if not month_number:
-        return {"error": "Invalid month. Provide 1-12 or a month name."}
-    return fetch_employees_by_join_month_year(month_number, year)
-
-
 def _build_agent() -> AgentExecutor | None:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
@@ -166,14 +79,7 @@ def _build_agent() -> AgentExecutor | None:
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=api_key)
     global sql_llm
     sql_llm = llm
-    tools = [
-        get_all_employees,
-        get_employee_by_name,
-        get_employee_by_id,
-        get_employees_by_joindate,
-        get_employees_by_join_month_year,
-        query_employees_nl,
-    ]
+    tools = [query_employees_nl]
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -183,10 +89,7 @@ def _build_agent() -> AgentExecutor | None:
             "The employee table has these columns: id, name, joined_date, salary, role, department, active, date_of_resign. "
             "active = 1 means current employee, active = 0 means ex-employee. "
 
-            "If the user says 'emp' followed by a number (like 'emp 4'), treat it as employee ID and call get_employee_by_id. "
-            "If the user mentions a name, call get_employee_by_name. "
-            "If asked for all employees, call get_all_employees. "  # fix tool name here too!
-            "For salary ranges, department filters, or complex queries, call query_employees_nl. "
+            "Always call query_employees_nl for any user question. "
 
             "Call each tool only ONCE. "
             "Never retry the same tool twice. "
@@ -270,11 +173,6 @@ def _extract_sql(steps: list[tuple]) -> str | None:
             return observation["sql"]
 
     return None
-
-
-@app.get("/employees", response_model=list[EmployeeOut])
-def get_employees():
-    return fetch_all_employees()
 
 
 @app.get("/employees/{employee_id}", response_model=EmployeeOut)
