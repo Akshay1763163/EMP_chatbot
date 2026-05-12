@@ -9,11 +9,14 @@ from langchain_groq import ChatGroq
 
 from .db import fetch_employee_by_id, run_select_query
 from .schemas import ChatRequest, ChatResponse, EmployeeOut
+from .vector_store import build_schema_store, get_relevant_schema
 
 load_dotenv()
 
 app = FastAPI(title="Employee API")
 sql_llm: ChatGroq | None = None
+
+build_schema_store()
 
 
 def _sanitize_sql(sql: str) -> str | None:
@@ -39,11 +42,16 @@ def _sanitize_sql(sql: str) -> str | None:
 
 
 def _generate_sql(question: str) -> str:
+    schema_context = get_relevant_schema(question)
+
     prompt = (
-        "You write a single SELECT query for SQL Server. "
-        "Only use the table dbo.Employees with columns id, name, joined_date, salary, role, department, active, date_of_resign. "
-        "Return SQL only, no markdown, no explanation. "
-        "If the question asks for employees, select id, name, joined_date, salary, role, department, active, date_of_resign. "
+        "You are a SQL expert for SQL Server.\n\n"
+        "Use this schema to write a single SELECT query:\n"
+        f"{schema_context}\n\n"
+        "Rules:\n"
+        "- Return SQL only, no markdown, no explanation\n"
+        "- SELECT statements only\n"
+        "- Use LIKE '%value%' for name searches\n\n"
         f"Question: {question}"
     )
     response = sql_llm.invoke(prompt)
