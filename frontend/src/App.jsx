@@ -250,27 +250,37 @@ function App() {
         )}
 
         {chatResults.length > 0 && (
-          <div className="grid">
-            {chatResults.map((employee) => (
-              <article key={employee.id} className="card">
-                <div className="card-title">
-                  <span>#{employee.id}</span>
-                  <strong>{employee.name}</strong>
-                </div>
-                <div className="card-meta">
-                  <span>{employee.role}</span>
-                  <span>{employee.department}</span>
-                </div>
-                <div className="card-meta">
-                  <span>{employee.joined_date}</span>
-                  <span>{formatSalary(employee.salary)}</span>
-                </div>
-                <div className="card-meta">
-                  <span>{formatActiveStatus(employee.active)}</span>
-                  <span>{employee.date_of_resign || '—'}</span>
-                </div>
-              </article>
-            ))}
+          <div className="table-wrapper">
+            <table className="results-table">
+              <thead>
+                <tr>
+                  {Object.keys(chatResults[0]).map((col) => (
+                    <th key={col}>
+                      {col.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {chatResults.map((row, i) => (
+                  <tr key={i}>
+                    {Object.entries(row).map(([col, val], j) => (
+                      <td key={j}>
+                        {val === null || val === undefined
+                          ? '—'
+                          : typeof val === 'boolean'
+                          ? val
+                            ? 'Active'
+                            : 'Inactive'
+                          : col.toLowerCase().includes('salary')
+                          ? formatSalary(val)
+                          : String(val)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

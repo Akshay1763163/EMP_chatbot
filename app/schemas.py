@@ -19,5 +19,5 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    results: list[EmployeeOut] = []
+    results: list[dict] = []
     sql: str | None = None

@@ -31,11 +31,19 @@ def _sanitize_sql(sql: str) -> str | None:
     if not lowered.startswith("select"):
         return None
 
-    blocked = ["insert", "update", "delete", "drop", "alter", "truncate", "exec", "merge"]
+    blocked = [
+        "insert",
+        "update",
+        "delete",
+        "drop",
+        "alter",
+        "truncate",
+        "exec",
+        "merge",
+        "xp_",
+        "sp_",
+    ]
     if any(keyword in lowered for keyword in blocked):
-        return None
-
-    if "dbo.employees" not in lowered:
         return None
 
     return cleaned
@@ -94,7 +102,6 @@ def _build_agent() -> AgentExecutor | None:
             (
             "system",
             "You are an HR assistant. Use ONLY the provided tools to answer questions about employees. "
-            "The employee table has these columns: id, name, joined_date, salary, role, department, active, date_of_resign. "
             "active = 1 means current employee, active = 0 means ex-employee. "
             "Always use LIKE '%value%' for name searches, never use = for names. "
             "Always call query_employees_nl for any user question. "
@@ -181,6 +188,29 @@ def _extract_sql(steps: list[tuple]) -> str | None:
             return observation["sql"]
 
     return None
+
+
+@app.post("/sync-schema", tags=["Schema"])
+def sync_schema():
+    """Manually trigger a ChromaDB sync from the live database schema."""
+    result = build_schema_store()
+    return {
+        "status": "ok",
+        "synced_tables": result["synced"],
+        "deleted_tables": result["deleted"],
+    }
+
+
+@app.get("/schema-status", tags=["Schema"])
+def schema_status():
+    """See what tables and columns ChromaDB currently knows about."""
+    from .vector_store import collection
+
+    data = collection.get()
+    return {
+        "total_tables": len(data["ids"]),
+        "tables": [d for d in data["documents"]],
+    }
 
 
 @app.get("/employees/{employee_id}", response_model=EmployeeOut)
