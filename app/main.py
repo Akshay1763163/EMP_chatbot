@@ -110,7 +110,13 @@ def _build_agent() -> AgentExecutor | None:
             "Never retry the same tool twice. "
             "If no records match, say so in a friendly sentence. "
             "Do not describe tool calls or internal steps. "
-            "Answer directly using the tool results only.",
+            "Answer directly using the tool results only. "
+            "IMPORTANT - SQL rules: "
+            "Only JOIN tables when the user explicitly asks for data from multiple tables. "
+            "For single-table questions, query that table directly without joining. "
+            "Always use the most direct and simple SQL possible. "
+            "For project status use exact values: 'Active', 'Completed', 'On Hold'. "
+            "ongoing/current projects means status = 'Active' or end_date IS NULL. ",
         ),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
