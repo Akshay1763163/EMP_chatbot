@@ -1,4 +1,6 @@
+import asyncio
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
@@ -10,13 +12,24 @@ from langchain_groq import ChatGroq
 from .db import fetch_employee_by_id, run_select_query
 from .schemas import ChatRequest, ChatResponse, EmployeeOut
 from .vector_store import build_schema_store, get_relevant_schema
+from .worker import poll_schema_changes, _check_and_sync
 
 load_dotenv()
 
-app = FastAPI(title="Employee API")
-sql_llm: ChatGroq | None = None
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- STARTUP ---
+    await _check_and_sync()  # sync once immediately on startup
+    task = asyncio.create_task(poll_schema_changes(interval_seconds=60))
 
-build_schema_store()
+    yield  # app runs here
+
+    # --- SHUTDOWN ---
+    task.cancel()  # cleanly stop the worker when app shuts down
+
+
+app = FastAPI(title="Employee API", lifespan=lifespan)
+sql_llm: ChatGroq | None = None
 
 
 def _sanitize_sql(sql: str) -> str | None:
